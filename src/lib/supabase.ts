@@ -56,6 +56,7 @@ export interface Job {
   status: 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
   created_at: string
   updated_at: string
+  type: string // Added to support job type (e.g., 'handy' or 'domestic')
 }
 
 // Auth functions

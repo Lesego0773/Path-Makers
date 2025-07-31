@@ -26,26 +26,28 @@ const EmployerLogin: React.FC<EmployerLoginProps> = ({ onLoginSuccess, onSignupC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null); 
-
+    setError(null);
+    // Check for Supabase credentials
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      setError('Supabase credentials are missing. Please check your .env file.');
+      setIsLoading(false);
+      return;
+    }
     try {
       console.log('Attempting to sign in employer with email:', formData.email);
       const { user } = await signInUser(formData.email, formData.password);
-      
       if (!user) {
-        throw new Error('Login failed. Please check your credentials.')
+        throw new Error('Login failed. Please check your credentials.');
       }
-      
-      // Check if user is an employer
-      const userType = user.user_metadata?.user_type
+      const userType = user.user_metadata?.user_type;
       if (userType && userType !== 'employer') {
-        throw new Error('This account is registered as a worker. Please use the worker login.')
+        throw new Error('This account is registered as a worker. Please use the worker login.');
       }
-      
       onLoginSuccess();
     } catch (err: any) {
       console.error('Employer login error:', err);
       setError(err.message || 'Login failed. Please check your credentials.');
+      alert('Login error: ' + (err.message || err));
     } finally {
       setIsLoading(false);
     }

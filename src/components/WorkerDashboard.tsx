@@ -29,6 +29,7 @@ const WorkerDashboard: React.FC = () => {
   const [profileData, setProfileData] = useState<Partial<Worker>>({});
   const [jobs, setJobs] = useState<any[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [jobsTab, setJobsTab] = useState<'all' | 'active' | 'completed'>('all'); // NEW: sub-tab state
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -206,6 +207,13 @@ const WorkerDashboard: React.FC = () => {
       ...profileData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleApplyJob = async (jobId: string) => {
+    // TODO: Implement job application logic (call supabase or backend)
+    alert(`Applied for job ${jobId}`);
+    // Optionally reload jobs
+    loadJobs();
   };
 
   const renderVerificationContent = () => {
@@ -490,32 +498,48 @@ const WorkerDashboard: React.FC = () => {
         return renderVerificationContent();
 
       case 'jobs':
+        // Filter jobs for sub-tabs
+        let filteredJobs = jobs;
+        if (jobsTab === 'active') {
+          filteredJobs = jobs.filter(job => job.status === 'active' || job.status === 'in_progress');
+        } else if (jobsTab === 'completed') {
+          filteredJobs = jobs.filter(job => job.status === 'completed' || job.applied === true);
+        } // 'all' shows all jobs
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-2xl font-bold text-white">My Jobs</h3>
               <div className="flex space-x-2">
-                <button className="bg-[#0FFCBE]/20 text-white px-4 py-2 rounded-lg hover:bg-[#0FFCBE]/30 transition-all">
+                <button
+                  className={`px-4 py-2 rounded-lg transition-all ${jobsTab === 'all' ? 'bg-[#0FFCBE]/20 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  onClick={() => setJobsTab('all')}
+                >
                   All
                 </button>
-                <button className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-all">
+                <button
+                  className={`px-4 py-2 rounded-lg transition-all ${jobsTab === 'active' ? 'bg-[#0FFCBE]/20 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  onClick={() => setJobsTab('active')}
+                >
                   Active
                 </button>
-                <button className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-all">
+                <button
+                  className={`px-4 py-2 rounded-lg transition-all ${jobsTab === 'completed' ? 'bg-[#0FFCBE]/20 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  onClick={() => setJobsTab('completed')}
+                >
                   Completed
                 </button>
               </div>
             </div>
 
-            {jobs.length === 0 ? (
+            {filteredJobs.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-white/40 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-white mb-2">No jobs yet</h3>
-                <p className="text-white/60">Complete your verification to start receiving job opportunities.</p>
+                <p className="text-white/60">{jobsTab === 'active' ? 'No active jobs available.' : jobsTab === 'completed' ? 'No completed jobs yet.' : 'Complete your verification to start receiving job opportunities.'}</p>
               </div>
             ) : (
               <div className="grid gap-6">
-                {jobs.map((job) => (
+                {filteredJobs.map((job) => (
                   <div key={job.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -530,7 +554,6 @@ const WorkerDashboard: React.FC = () => {
                         {job.status.replace('_', ' ')}
                       </span>
                     </div>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center space-x-2">
                         <Calendar className="w-4 h-4 text-[#0FFCBE]" />
@@ -545,13 +568,19 @@ const WorkerDashboard: React.FC = () => {
                         <span className="text-white/80">{job.location}</span>
                       </div>
                     </div>
-
                     <p className="text-white/80 mb-4">{job.description}</p>
-
                     <div className="flex space-x-3">
                       <button className="bg-[#0FFCBE] text-[#106EBE] px-4 py-2 rounded-lg font-medium hover:bg-[#0FFCBE]/90 transition-all">
                         View Details
                       </button>
+                      {jobsTab === 'active' && (
+                        <button
+                          className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-all"
+                          onClick={() => handleApplyJob(job.id)}
+                        >
+                          Apply
+                        </button>
+                      )}
                       {job.status === 'completed' && (
                         <button className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-all">
                           Download Invoice
@@ -733,37 +762,34 @@ const WorkerDashboard: React.FC = () => {
     }
   };
 
+  // Add Sign Out button to dashboard header
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">Worker Dashboard</h1>
-          <p className="text-xl text-white/80">Welcome back, {userProfile?.full_name}</p>
+      <div className="max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold text-white">Worker Dashboard</h2>
+          <button
+            onClick={signOut}
+            className="flex items-center bg-[#0FFCBE] text-[#106EBE] px-5 py-2 rounded-lg font-semibold hover:bg-[#0FFCBE]/90 transition-all duration-300"
+          >
+            <LogOut className="w-5 h-5 mr-2" /> Sign Out
+          </button>
         </div>
-
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap justify-center mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
+          {/* Tabs */}
+          <div className="flex space-x-4 mb-8">
+            {tabs.map(tab => (
               <button
                 key={tab.id}
+                className={`flex items-center px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${activeTab === tab.id ? 'bg-[#0FFCBE]/20 text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all duration-300 m-1 ${
-                  activeTab === tab.id
-                    ? 'bg-[#0FFCBE] text-[#106EBE] font-medium'
-                    : 'text-white hover:bg-white/10'
-                }`}
               >
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <tab.icon className="w-5 h-5 mr-2" />
+                {tab.label}
               </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Content */}
-        <div className="min-h-[600px]">
+            ))}
+          </div>
+          {/* Tab Content */}
           {renderTabContent()}
         </div>
       </div>

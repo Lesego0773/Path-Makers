@@ -29,6 +29,16 @@ const EmployerDashboard: React.FC = () => {
   const [nearbyWorkers, setNearbyWorkers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPostJobModal, setShowPostJobModal] = useState(false);
+  const [newJob, setNewJob] = useState({
+    title: '',
+    description: '',
+    budget: '',
+    location: '',
+    workerType: 'handy',
+    category: 'handy', // Default category to 'handy'
+  });
+  const [postingJob, setPostingJob] = useState(false);
 
   // Redirect if not authenticated or not an employer
   if (!user || userType !== 'employer') {
@@ -81,6 +91,30 @@ const EmployerDashboard: React.FC = () => {
       console.error('Error loading jobs:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePostJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setPostingJob(true);
+    try {
+      await createJob({
+        ...newJob,
+        budget: parseFloat(newJob.budget),
+        employer_id: user.id,
+        type: newJob.workerType,
+        category: newJob.category || newJob.workerType, // Ensure category is set
+        status: 'open', // Set default status
+      });
+      setShowPostJobModal(false);
+      setNewJob({ title: '', description: '', budget: '', location: '', workerType: 'handy', category: 'handy' });
+      loadJobs();
+      alert('Job posted successfully!');
+    } catch (error) {
+      alert('Failed to post job.');
+    } finally {
+      setPostingJob(false);
     }
   };
 
@@ -372,10 +406,88 @@ const EmployerDashboard: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-2xl font-bold text-white">My Jobs</h3>
-              <button className="bg-[#0FFCBE] text-[#106EBE] px-6 py-3 rounded-lg font-semibold hover:bg-[#0FFCBE]/90 transition-all duration-300">
+              <button
+                className="bg-[#0FFCBE] text-[#106EBE] px-6 py-3 rounded-lg font-semibold hover:bg-[#0FFCBE]/90 transition-all duration-300"
+                onClick={() => setShowPostJobModal(true)}
+              >
                 Post New Job
               </button>
             </div>
+            {/* Post Job Modal */}
+            {showPostJobModal && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl p-8 max-w-lg w-full relative">
+                  <button
+                    className="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl"
+                    onClick={() => setShowPostJobModal(false)}
+                  >
+                    ×
+                  </button>
+                  <h2 className="text-2xl font-bold mb-6 text-[#106EBE]">Post a New Job</h2>
+                  <form onSubmit={handlePostJob} className="space-y-4">
+                    <div>
+                      <label className="block text-[#106EBE] font-semibold mb-1">Job Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={newJob.title}
+                        onChange={e => setNewJob({ ...newJob, title: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#106EBE] font-semibold mb-1">Description</label>
+                      <textarea
+                        required
+                        value={newJob.description}
+                        onChange={e => setNewJob({ ...newJob, description: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-[#106EBE] font-semibold mb-1">Budget (R)</label>
+                        <input
+                          type="number"
+                          required
+                          value={newJob.budget}
+                          onChange={e => setNewJob({ ...newJob, budget: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[#106EBE] font-semibold mb-1">Location</label>
+                        <input
+                          type="text"
+                          required
+                          value={newJob.location}
+                          onChange={e => setNewJob({ ...newJob, location: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[#106EBE] font-semibold mb-1">Worker Type</label>
+                      <select
+                        value={newJob.workerType}
+                        onChange={e => setNewJob({ ...newJob, workerType: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      >
+                        <option value="handy">Handy Worker</option>
+                        <option value="domestic">Domestic Worker</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={postingJob}
+                      className="w-full bg-[#0FFCBE] text-[#106EBE] px-6 py-3 rounded-lg font-semibold hover:bg-[#0FFCBE]/90 transition-all duration-300 mt-4"
+                    >
+                      {postingJob ? 'Posting...' : 'Post Job'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
 
             {isLoading ? (
               <div className="text-center py-12">
